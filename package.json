@@ -7,7 +7,8 @@
     "type": "tsc -p src/app-public/tsconfig.json --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:ci": "vitest run --coverage"
+    "test:ci": "vitest run --coverage",
+    "cli": "npm run build && node ./bin/ksef-cli.mjs"
   },
   "main": "./ksef-fe-invoice-converter.umd.cjs",
   "module": "./ksef-fe-invoice-converter.js",
@@ -52,5 +53,8 @@
   "dependencies": {
     "pdfmake": "^0.2.20",
     "xml-js": "^1.6.11"
+  },
+  "bin": {
+    "ksef-pdf-cli": "./bin/ksef-cli.mjs"
   }
 }

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { parseXML, stripPrefixes } from './XML-parser';
 
 describe('stripPrefixes', () => {
@@ -39,60 +39,19 @@ describe('stripPrefixes', () => {
 });
 
 describe('parseXML', () => {
-  const xmlSample = `<root><ns:name>test</ns:name></root>`;
-  const file = new File([xmlSample], 'test.xml', { type: 'text/xml' });
-
-  beforeEach(() => {
-    vi.stubGlobal(
-      'FileReader',
-      class {
-        onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => any) | null = null;
-        public readAsText(): void {
-          const event = { target: { result: xmlSample } } as ProgressEvent<FileReader>;
-
-          setTimeout(
-            () =>
-              (this.onload as ((this: FileReader, ev: ProgressEvent<FileReader>) => void) | null)?.call(
-                this as unknown as FileReader,
-                event
-              ),
-            0
-          );
-        }
-      }
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it('correctly parses XML into a JSON object', async () => {
-    const result: any = await parseXML(file);
+    const xmlSample = `<root><ns:name>test</ns:name></root>`;
+    const file = { text: async () => xmlSample };
+
+    const result: any = await parseXML(file as any);
 
     expect(result).toHaveProperty('root');
     expect(Object.keys(result.root)).toContain('name');
   });
 
   it('rejects the promise with an error on invalid XML', async () => {
-    vi.stubGlobal(
-      'FileReader',
-      class {
-        onload: ((this: FileReader, ev: ProgressEvent<FileReader>) => any) | null = null;
-        public readAsText(): void {
-          const event = { target: { result: '<root><unclosed>' } } as ProgressEvent<FileReader>;
+    const file = { text: async () => '<root><unclosed>' };
 
-          setTimeout(
-            () =>
-              (this.onload as ((this: FileReader, ev: ProgressEvent<FileReader>) => void) | null)?.call(
-                this as unknown as FileReader,
-                event
-              ),
-            0
-          );
-        }
-      }
-    );
-    await expect(parseXML(file)).rejects.toThrow();
+    await expect(parseXML(file as any)).rejects.toThrow();
   });
 });

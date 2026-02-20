@@ -125,3 +125,53 @@ Raport: /coverage/index.html
 
 - Upewnij się, że pliki XML są poprawnie sformatowane zgodnie z odpowiednią schemą.
 - W przypadku problemów z Node.js, rozważ użycie menedżera wersji Node, np. [nvm](https://github.com/nvm-sh/nvm).
+
+## 6. Tryb CLI (Node.js)
+
+Po zbudowaniu biblioteki możesz uruchamiać konwersję XML -> PDF z linii poleceń:
+
+```bash
+npm run cli -- --input assets/invoice.xml --output-dir ./out --nr-ksef "KSEF-123" --qr-code "https://example.local/qr"
+```
+
+### Konwersja wielu plików
+
+```bash
+npm run cli -- --input-dir ./input --output-dir ./out
+```
+
+### Tryb nasłuchiwania katalogu
+
+```bash
+npm run cli -- --input-dir ./input --output-dir ./out --watch
+```
+
+W trybie `--watch` każde nowe XML dodane do katalogu wejściowego zostanie automatycznie przetworzone.
+
+## 7. Docker (np. Synology)
+
+### Budowanie obrazu
+
+```bash
+docker build -t ksef-pdf-cli .
+```
+
+### Uruchomienie jednorazowe
+
+```bash
+docker run --rm \
+  -v /volume1/docker/ksef/input:/app/input \
+  -v /volume1/docker/ksef/output:/app/output \
+  ksef-pdf-cli \
+  --input-dir /app/input --output-dir /app/output
+```
+
+### Uruchomienie w trybie nasłuchiwania
+
+```bash
+docker run --rm \
+  -v /volume1/docker/ksef/input:/app/input \
+  -v /volume1/docker/ksef/output:/app/output \
+  ksef-pdf-cli \
+  --input-dir /app/input --output-dir /app/output --watch
+```
