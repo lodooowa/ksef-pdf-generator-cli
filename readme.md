@@ -140,6 +140,49 @@ npm run cli -- --input assets/invoice.xml --output-dir ./out --nr-ksef "KSEF-123
 npm run cli -- --input-dir ./input --output-dir ./out
 ```
 
+### Przekazywanie `additionalData` (np. `nrKSeF`, `qrCode`)
+
+Najprościej przez dedykowane flagi:
+
+```bash
+npm run cli -- --input assets/invoice.xml --output-dir ./out --nr-ksef "KSEF-123" --qr-code "https://twoj-link-qr"
+```
+
+Jeśli chcesz przekazać dodatkowe pola (np. `isMobile`), możesz dodać JSON:
+
+```bash
+npm run cli -- --input assets/invoice.xml --output-dir ./out --nr-ksef "KSEF-123" --additional-data-json '{"isMobile":true}'
+```
+
+
+Dla wielu plików możesz przekazać inny zestaw `additionalData` per XML przez mapę:
+
+```bash
+npm run cli -- --input assets/invoice-a.xml,assets/invoice-b.xml --output-dir ./out \
+  --additional-data-map-json '{"invoice-a.xml":{"nrKSeF":"KSEF-A","qrCode":"https://qr/a"},"invoice-b.xml":{"nrKSeF":"KSEF-B","qrCode":"https://qr/b"}}'
+```
+
+Mapowanie działa po **nazwie pliku** (`invoice-a.xml`) albo po **pełnej ścieżce**.
+
+
+
+### Automatyczne wyciąganie danych QR (KOD I)
+
+CLI automatycznie wylicza link QR KOD I wg dokumentacji KSeF:
+- `https://qr.ksef.mf.gov.pl/invoice/{NIP}/{DD-MM-RRRR}/{SHA256_Base64URL}`
+- bez parsowania XML — wszystkie dane wejściowe (poza hashem) są pobierane z nazwy pliku
+- skrót SHA-256 liczony z całej zawartości pliku XML
+
+Wymagany format nazwy pliku:
+- `KSEF_NIP_DATA_ID.xml`, np. `KSEF_5555555555-20250808-9231003CA67B-BE.xml`
+- `NIP` -> 10 cyfr
+- `DATA` -> `RRRRMMDD`, konwertowane do `DD-MM-RRRR` w linku QR
+- `ID` -> dowolny identyfikator (w tym przebiegu nieużywany)
+
+`nrKSeF` jest automatycznie ustawiane na `NIP-DATA-ID` (czyli fragment po `KSEF_` i przed `.xml`).
+
+Ręczne flagi `--nr-ksef`, `--qr-code`, `--additional-data-json` i `--additional-data-map-json` nadal działają i nadpisują wartości automatyczne.
+
 ### Tryb nasłuchiwania katalogu
 
 ```bash
