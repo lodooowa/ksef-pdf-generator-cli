@@ -3,11 +3,11 @@ import fs from 'node:fs/promises';
 import { watch } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
 import { generateInvoice } from '../dist/ksef-fe-invoice-converter.js';
+import { pruneUndefined, resolveAdditionalDataForFile } from './additional-data.mjs';
 
 function parseCliArgs(argv) {
-  const options = { watch: false };
+  const options = { watch: false, debug: false };
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -36,6 +36,9 @@ function parseCliArgs(argv) {
         break;
       case '--watch':
         options.watch = true;
+        break;
+      case '--debug':
+        options.debug = true;
         break;
       case '--additional-data-json':
         options.additionalDataJson = next;
@@ -82,6 +85,7 @@ Opcje:
                           JSON mapujący additionalData per plik, np.
                           '{"KSEF_5555555555-20250808-ABC.xml":{"nrKSeF":"5555555555-20250808-ABC"}}'.
                           Klucz = nazwa pliku XML (basename) albo pełna ścieżka.
+  --debug                 Loguje final additionalData dla każdego pliku.
   --watch                 Nasłuchuje nowe pliki XML w --input-dir.
   --help, -h              Wyświetla pomoc.
 `);
@@ -93,52 +97,6 @@ function isXmlFile(filePath) {
 
 function toPdfOutputPath(xmlPath, outputDir) {
   return path.join(outputDir, `${path.basename(xmlPath, path.extname(xmlPath))}.pdf`);
-}
-
-function toBase64Url(base64Text) {
-  return base64Text.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function parseKsefFileName(xmlPath) {
-  const fileName = path.basename(xmlPath);
-  const match = fileName.match(/^KSEF_(\d{10})-(\d{8})-(.+)\.xml$/i);
-
-  if (!match) {
-    return undefined;
-  }
-
-  const nip = match[1];
-  const rawDate = match[2];
-  const nrKSeF = `${nip}-${rawDate}-${match[3]}`;
-  const issueDate = `${rawDate.slice(6, 8)}-${rawDate.slice(4, 6)}-${rawDate.slice(0, 4)}`;
-
-  return {
-    nip,
-    issueDate,
-    nrKSeF,
-  };
-}
-
-function buildAutoAdditionalData(xmlPath, xmlText) {
-  const nameData = parseKsefFileName(xmlPath);
-  const hash = toBase64Url(createHash('sha256').update(xmlText, 'utf8').digest('base64'));
-
-  return {
-    nrKSeF: nameData?.nrKSeF ?? '',
-    qrCode: nameData ? `https://qr.ksef.mf.gov.pl/invoice/${nameData.nip}/${nameData.issueDate}/${hash}` : undefined,
-  };
-}
-
-function resolveAdditionalDataForFile(xmlPath, xmlText, defaultAdditionalData, additionalDataMap) {
-  const fileName = path.basename(xmlPath);
-  const fileSpecificData = additionalDataMap[xmlPath] ?? additionalDataMap[fileName] ?? {};
-  const autoAdditionalData = buildAutoAdditionalData(xmlPath, xmlText);
-
-  return {
-    ...autoAdditionalData,
-    ...defaultAdditionalData,
-    ...fileSpecificData,
-  };
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -156,14 +114,17 @@ async function convertXmlToPdf(xmlPath, xmlText, outputDir, additionalData) {
   console.log(`Wygenerowano: ${outputPath}`);
 }
 
-async function convertSingleFile(xmlPath, outputDir, defaultAdditionalData, additionalDataMap) {
+async function convertSingleFile(xmlPath, outputDir, defaultAdditionalData, additionalDataMap, debug = false) {
   const xmlText = await fs.readFile(xmlPath, 'utf-8');
   const additionalData = resolveAdditionalDataForFile(xmlPath, xmlText, defaultAdditionalData, additionalDataMap);
+  if (debug) {
+    console.debug(`[debug] additionalData (${path.basename(xmlPath)}):`, additionalData);
+  }
 
   await convertXmlToPdf(xmlPath, xmlText, outputDir, additionalData);
 }
 
-async function convertFromInputList(input, outputDir, additionalData, additionalDataMap) {
+async function convertFromInputList(input, outputDir, additionalData, additionalDataMap, debug = false) {
   const files = input
     .split(',')
     .map((entry) => entry.trim())
@@ -172,18 +133,18 @@ async function convertFromInputList(input, outputDir, additionalData, additional
     .filter(isXmlFile);
 
   for (const file of files) {
-    await convertSingleFile(file, outputDir, additionalData, additionalDataMap);
+    await convertSingleFile(file, outputDir, additionalData, additionalDataMap, debug);
   }
 }
 
-async function convertFromDirectory(inputDir, outputDir, additionalData, additionalDataMap) {
+async function convertFromDirectory(inputDir, outputDir, additionalData, additionalDataMap, debug = false) {
   const absoluteInputDir = path.resolve(repoRoot, inputDir);
   const entries = await fs.readdir(absoluteInputDir, { withFileTypes: true });
 
   for (const entry of entries) {
     if (entry.isFile() && isXmlFile(entry.name)) {
       const xmlPath = path.join(absoluteInputDir, entry.name);
-      await convertSingleFile(xmlPath, outputDir, additionalData, additionalDataMap);
+      await convertSingleFile(xmlPath, outputDir, additionalData, additionalDataMap, debug);
     }
   }
 }
@@ -206,14 +167,18 @@ async function main() {
   }
 
   const outputDir = path.resolve(repoRoot, options.outputDir);
-  const additionalData = {
-    nrKSeF: options.nrKSeF,
-    qrCode: options.qrCode,
-    ...jsonAdditionalData,
-  };
+  const additionalData = pruneUndefined({ ...jsonAdditionalData });
+
+  if (options.nrKSeF) {
+    additionalData.nrKSeF = options.nrKSeF;
+  }
+
+  if (options.qrCode) {
+    additionalData.qrCode = options.qrCode;
+  }
 
   if (options.input) {
-    await convertFromInputList(options.input, outputDir, additionalData, additionalDataMap);
+    await convertFromInputList(options.input, outputDir, additionalData, additionalDataMap, options.debug);
   }
 
   if (!options.inputDir) {
@@ -221,7 +186,7 @@ async function main() {
   }
 
   const absoluteInputDir = path.resolve(repoRoot, options.inputDir);
-  await convertFromDirectory(absoluteInputDir, outputDir, additionalData, additionalDataMap);
+  await convertFromDirectory(absoluteInputDir, outputDir, additionalData, additionalDataMap, options.debug);
 
   if (!options.watch) {
     return;
@@ -245,7 +210,7 @@ async function main() {
     try {
       const stat = await fs.stat(absoluteFile);
       if (stat.isFile()) {
-        await convertSingleFile(absoluteFile, outputDir, additionalData, additionalDataMap);
+        await convertSingleFile(absoluteFile, outputDir, additionalData, additionalDataMap, options.debug);
       }
     } catch {
       // plik mógł zostać usunięty zanim zdążyliśmy go przetworzyć
@@ -258,7 +223,9 @@ async function main() {
   });
 }
 
-main().catch((error) => {
-  console.error(error?.message ?? error);
-  process.exit(1);
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main().catch((error) => {
+    console.error(error?.message ?? error);
+    process.exit(1);
+  });
+}
