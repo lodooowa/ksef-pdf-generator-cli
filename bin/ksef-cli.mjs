@@ -107,10 +107,24 @@ async function convertXmlToPdf(xmlPath, xmlText, outputDir, additionalData) {
   const file = new File([xmlText], path.basename(xmlPath), { type: 'text/xml' });
   const blob = await generateInvoice(file, additionalData, 'blob');
   const outputPath = toPdfOutputPath(xmlPath, outputDir);
+  const tempOutputPath = `${outputPath}.${process.pid}.${Date.now()}.tmp`;
+  const syncOutputPath = `${outputPath}.sync`;
   const buffer = Buffer.from(await blob.arrayBuffer());
 
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
-  await fs.writeFile(outputPath, buffer);
+  const fileHandle = await fs.open(tempOutputPath, 'w');
+
+  try {
+    await fileHandle.writeFile(buffer);
+    await fileHandle.sync();
+  } finally {
+    await fileHandle.close();
+  }
+
+  await fs.rename(tempOutputPath, outputPath);
+  await fs.rename(outputPath, syncOutputPath);
+  await fs.rename(syncOutputPath, outputPath);
+  await fs.utimes(outputPath, new Date(), new Date());
   console.log(`Wygenerowano: ${outputPath}`);
 }
 
