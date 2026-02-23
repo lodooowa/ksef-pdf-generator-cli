@@ -110,7 +110,16 @@ async function convertXmlToPdf(xmlPath, xmlText, outputDir, additionalData) {
   const buffer = Buffer.from(await blob.arrayBuffer());
 
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
-  await fs.writeFile(outputPath, buffer);
+  const fileHandle = await fs.open(outputPath, 'w');
+
+  try {
+    await fileHandle.writeFile(buffer);
+    await fileHandle.sync();
+  } finally {
+    await fileHandle.close();
+  }
+
+  await fs.utimes(outputPath, new Date(), new Date());
   console.log(`Wygenerowano: ${outputPath}`);
 }
 
