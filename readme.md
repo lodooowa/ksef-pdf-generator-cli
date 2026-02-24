@@ -1,134 +1,113 @@
 # Biblioteka do generowania wizualizacji PDF faktur i UPO
 
-Biblioteka do generowania wizualizacji PDF faktur oraz UPO na podstawie plików XML po stronie klienta.
+Biblioteka generuje wizualizacje PDF faktur oraz UPO na podstawie plików XML. Repozytorium zawiera:
+- bibliotekę TypeScript (API eksportowane z `src/lib-public`),
+- prostą aplikację pokazową uruchamianą przez Vite,
+- tryb CLI do wsadowej konwersji XML -> PDF.
 
 ---
 
-## 1. Główne ustalenia
+## 1. Zakres funkcjonalny
 
-    Biblioteka zawiera następujące funkcjonalności:
-    - Generowanie wizualizacji PDF faktur
-    - Generowanie wizualizacji PDF UPO
+Aplikacja/biblioteka obsługuje:
+- generowanie PDF faktur dla schematów **FA (1), FA (2), FA (3)**,
+- generowanie PDF UPO,
+- uruchamianie konwersji z CLI dla pojedynczych plików, listy plików oraz katalogu,
+- opcjonalny tryb nasłuchiwania katalogu wejściowego (`--watch`).
 
 ---
 
-## 2. Jak uruchomić aplikację pokazową
+## 2. Uruchomienie aplikacji pokazowej
 
-1. Zainstaluj Node.js w wersji **22.14.0**  
-   Możesz pobrać Node.js z oficjalnej strony: [https://nodejs.org](https://nodejs.org)
-
+1. Zainstaluj Node.js 22.x (zgodnie z obrazem Docker opartym o Node 22).
 2. Sklonuj repozytorium i przejdź do folderu projektu:
    ```bash
-   git clone https://github.com/CIRFMF/ksef-pdf-generator#
-   cd ksef-pdf-generator
+   git clone https://github.com/CIRFMF/ksef-pdf-generator-cli.git
+   cd ksef-pdf-generator-cli
    ```
-
 3. Zainstaluj zależności:
    ```bash
    npm install
    ```
-
-4. Uruchom aplikację:
+4. Uruchom aplikację pokazową:
    ```bash
    npm run dev
    ```
 
-Aplikacja uruchomi się domyślnie pod adresem: [http://localhost:5173/](http://localhost:5173/)
+Aplikacja uruchamia się domyślnie pod adresem: [http://localhost:5173/](http://localhost:5173/).
 
-## 2.1 Budowanie bibliotki
+### Interfejs demo
 
-1. Jak zbudować bibliotekę produkcyjnie:
-   ```bash
-   npm run build
-   ```
+Demo zawiera dwa pola wyboru plików:
+- **Wygeneruj fakturę**,
+- **Wygeneruj UPO**.
 
-## 3. Jak wygenerować fakturę
-
-1. Po uruchomieniu aplikacji przejdź do **Wygeneruj wizualizacje faktury PDF**.
-2. Wybierz plik XML zgodny ze schemą **FA(1), FA(2) lub FA(3)**.
-3. Przykładowy plik znajduje się w folderze:
-   ```
-   examples/invoice.xml
-   ```  
-4. Po wybraniu pliku, PDF zostanie wygenerowany.
+Po wskazaniu pliku XML generowany PDF zostaje pobrany jako `test.pdf`.
 
 ---
 
-## 4. Jak wygenerować UPO
+## 3. Budowanie biblioteki
 
-1. Po uruchomieniu aplikacji przejdź do **Wygeneruj wizualizacje UPO PDF**.
-2. Wybierz plik XML zgodny ze schemą **UPO v4_2**.
-3. Przykładowy plik znajduje się w folderze:
+```bash
+npm run build
+```
+
+Build tworzy artefakty biblioteki w katalogu `dist/`.
+
+---
+
+## 4. Generowanie faktury (demo)
+
+1. Uruchom `npm run dev`.
+2. W sekcji **Wygeneruj fakturę** wybierz plik XML zgodny z FA(1)/FA(2)/FA(3).
+3. Przykładowy plik testowy znajduje się w repozytorium:
    ```
-   examples/upo.xml
-   ```  
-4. Po wybraniu pliku, PDF zostanie wygenerowany.
-
----
-
-## 5. Testy jednostkowe
-
-Aplikacja zawiera zestaw testów napisanych w **TypeScript**, które weryfikują poprawność działania aplikacji.  
-Projekt wykorzystuje **Vite** do bundlowania i **Vitest** jako framework testowy.
-
-### Uruchamianie testów
-
-1. Uruchom wszystkie testy:
-   ```bash
-   npm run test
+   assets/invoice.xml
    ```
+4. PDF zostanie wygenerowany i pobrany.
 
-2. Uruchom testy z interfejsem graficznym:
-   ```bash
-   npm run test:ui
+---
+
+## 5. Generowanie UPO (demo)
+
+1. Uruchom `npm run dev`.
+2. W sekcji **Wygeneruj UPO** wybierz plik XML UPO.
+3. Przykładowy plik testowy znajduje się w repozytorium:
    ```
-
-3. Uruchom testy w trybie CI z raportem pokrycia:
-   ```bash
-   npm run test:ci
+   assets/upo.xml
    ```
+4. PDF zostanie wygenerowany i pobrany.
 
 ---
 
-Raport: /coverage/index.html
+## 6. Testy
+
+Projekt wykorzystuje **Vitest**.
+
+- Wszystkie testy:
+  ```bash
+  npm run test
+  ```
+- Testy z UI:
+  ```bash
+  npm run test:ui
+  ```
+- Tryb CI + coverage:
+  ```bash
+  npm run test:ci
+  ```
+
+Raport pokrycia: `coverage/index.html`.
 
 ---
 
-### 1. Nazewnictwo zmiennych i metod
+## 7. Tryb CLI (Node.js)
 
-- **Polsko-angielskie nazwy** stosowane w zmiennych, typach i metodach wynikają bezpośrednio ze struktury pliku schemy
-  faktury.  
-  Takie podejście zapewnia spójność i ujednolicenie nazewnictwa z definicją danych zawartą w schemie XML.
+Polecenie CLI jest dostępne jako:
+- skrypt projektu: `npm run cli -- ...` (skrypt najpierw wykonuje build),
+- binarka pakietu: `ksef-pdf-cli`.
 
-### 2. Struktura danych
-
-- Struktura danych interfejsu FA odzwierciedla strukturę danych źródłowych pliku XML, zachowując ich logiczne powiązania
-  i hierarchię
-  w bardziej czytelnej formie.
-
-### 3. Typy i interfejsy
-
-- Typy odzwierciedlają strukturę danych pobieranych z XML faktur oraz ułatwiają generowanie PDF
-- Typy i interfejsy są definiowane w folderze types oraz plikach z rozszerzeniem types.ts.
-
----
-
-## Dokumentacja używanych narzędzi
-
-- Vitest Docs — https://vitest.dev/guide/
-- Vite Docs — https://vitejs.dev/guide/
-- TypeScript Handbook — https://www.typescriptlang.org/docs/
-
----
-
-## Uwagi
-
-- Upewnij się, że pliki XML są poprawnie sformatowane zgodnie z odpowiednią schemą.
-- W przypadku problemów z Node.js, rozważ użycie menedżera wersji Node, np. [nvm](https://github.com/nvm-sh/nvm).
-
-## 6. Tryb CLI (Node.js)
-
-Po zbudowaniu biblioteki możesz uruchamiać konwersję XML -> PDF z linii poleceń:
+### Podstawowe użycie
 
 ```bash
 npm run cli -- --input assets/invoice.xml --output-dir ./out --nr-ksef "KSEF-123" --qr-code "https://example.local/qr"
@@ -137,51 +116,59 @@ npm run cli -- --input assets/invoice.xml --output-dir ./out --nr-ksef "KSEF-123
 ### Konwersja wielu plików
 
 ```bash
+npm run cli -- --input assets/invoice-a.xml,assets/invoice-b.xml --output-dir ./out
+```
+
+### Konwersja katalogu
+
+```bash
 npm run cli -- --input-dir ./input --output-dir ./out
 ```
 
-### Przekazywanie `additionalData` (np. `nrKSeF`, `qrCode`)
+### `additionalData`
 
-Najprościej przez dedykowane flagi:
+Dane można przekazać przez dedykowane flagi:
 
 ```bash
 npm run cli -- --input assets/invoice.xml --output-dir ./out --nr-ksef "KSEF-123" --qr-code "https://twoj-link-qr"
 ```
 
-Jeśli chcesz przekazać dodatkowe pola (np. `isMobile`), możesz dodać JSON:
+Dodatkowe pola JSON:
 
 ```bash
-npm run cli -- --input assets/invoice.xml --output-dir ./out --nr-ksef "KSEF-123" --additional-data-json '{"isMobile":true}'
+npm run cli -- --input assets/invoice.xml --output-dir ./out --additional-data-json '{"isMobile":true}'
 ```
 
-
-Dla wielu plików możesz przekazać inny zestaw `additionalData` per XML przez mapę:
+Mapa `additionalData` per plik:
 
 ```bash
 npm run cli -- --input assets/invoice-a.xml,assets/invoice-b.xml --output-dir ./out \
   --additional-data-map-json '{"invoice-a.xml":{"nrKSeF":"KSEF-A","qrCode":"https://qr/a"},"invoice-b.xml":{"nrKSeF":"KSEF-B","qrCode":"https://qr/b"}}'
 ```
 
-Mapowanie działa po **nazwie pliku** (`invoice-a.xml`) albo po **pełnej ścieżce**.
+Mapowanie działa po **nazwie pliku** (`invoice-a.xml`) albo **pełnej ścieżce**.
 
+### Auto-wyciąganie danych QR (KOD I)
 
-
-### Automatyczne wyciąganie danych QR (KOD I)
-
-CLI automatycznie wylicza link QR KOD I wg dokumentacji KSeF:
-- `https://qr.ksef.mf.gov.pl/invoice/{NIP}/{DD-MM-RRRR}/{SHA256_Base64URL}`
-- bez parsowania XML — wszystkie dane wejściowe (poza hashem) są pobierane z nazwy pliku
-- skrót SHA-256 liczony z całej zawartości pliku XML
+CLI automatycznie wylicza link QR KOD I:
+- `https://qr.ksef.mf.gov.pl/invoice/{NIP}/{DD-MM-RRRR}/{SHA256_Base64URL}`,
+- hash SHA-256 liczony jest z pełnej zawartości XML,
+- dane `NIP` i data są wyciągane z nazwy pliku.
 
 Wymagany format nazwy pliku:
-- `KSEF_NIP_DATA_ID.xml`, np. `KSEF_5555555555-20250808-9231003CA67B-BE.xml`
-- `NIP` -> 10 cyfr
-- `DATA` -> `RRRRMMDD`, konwertowane do `DD-MM-RRRR` w linku QR
-- `ID` -> dowolny identyfikator (w tym przebiegu nieużywany)
+- `KSEF_NIP_DATA_ID.xml`, np. `KSEF_5555555555-20250808-9231003CA67B-BE.xml`.
 
-`nrKSeF` jest automatycznie ustawiane na `NIP-DATA-ID` (czyli fragment po `KSEF_` i przed `.xml`).
+Znaczenie segmentów:
+- `NIP` -> 10 cyfr,
+- `DATA` -> `RRRRMMDD` (konwertowane do `DD-MM-RRRR`),
+- `ID` -> dowolny identyfikator.
 
-Ręczne flagi `--nr-ksef`, `--qr-code`, `--additional-data-json` i `--additional-data-map-json` nadal działają i nadpisują wartości automatyczne.
+`nrKSeF` jest automatycznie ustawiane na `NIP-DATA-ID`.
+
+Priorytet danych (od najniższego):
+1. auto-wyliczenie z nazwy pliku,
+2. dane domyślne (`--nr-ksef`, `--qr-code`, `--additional-data-json`),
+3. dane per plik (`--additional-data-map-json`).
 
 ### Tryb nasłuchiwania katalogu
 
@@ -189,9 +176,17 @@ Ręczne flagi `--nr-ksef`, `--qr-code`, `--additional-data-json` i `--additional
 npm run cli -- --input-dir ./input --output-dir ./out --watch
 ```
 
-W trybie `--watch` każde nowe XML dodane do katalogu wejściowego zostanie automatycznie przetworzone.
+W trybie `--watch` każde nowe XML dodane do katalogu wejściowego jest automatycznie przetwarzane.
 
-## 7. Docker (np. Synology)
+### Pomoc CLI
+
+```bash
+npm run cli -- --help
+```
+
+---
+
+## 8. Docker
 
 ### Budowanie obrazu
 
@@ -218,3 +213,16 @@ docker run --rm \
   ksef-pdf-cli \
   --input-dir /app/input --output-dir /app/output --watch
 ```
+
+---
+
+## 9. Uwagi
+
+- Pliki XML powinny być poprawne i zgodne z odpowiednią strukturą.
+- Przy problemach z wersją Node.js warto użyć `nvm`.
+
+## Dokumentacja narzędzi
+
+- Vitest Docs — https://vitest.dev/guide/
+- Vite Docs — https://vitejs.dev/guide/
+- TypeScript Handbook — https://www.typescriptlang.org/docs/
