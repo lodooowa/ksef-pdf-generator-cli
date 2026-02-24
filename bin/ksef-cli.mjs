@@ -133,8 +133,9 @@ async function convertXmlToPdf(xmlPath, xmlText, outputDir, additionalData) {
 
 async function convertSingleFile(xmlPath, outputDir, defaultAdditionalData, additionalDataMap, debug = false) {
   console.info(`[ksef-cli] Odczyt XML: ${xmlPath}`);
-  const xmlText = await fs.readFile(xmlPath, 'utf-8');
-  const additionalData = resolveAdditionalDataForFile(xmlPath, xmlText, defaultAdditionalData, additionalDataMap);
+  const xmlBuffer = await fs.readFile(xmlPath);
+  const xmlText = xmlBuffer.toString('utf-8');
+  const additionalData = resolveAdditionalDataForFile(xmlPath, xmlBuffer, defaultAdditionalData, additionalDataMap);
   if (debug) {
     console.debug(`[debug] additionalData (${path.basename(xmlPath)}):`, additionalData);
   }

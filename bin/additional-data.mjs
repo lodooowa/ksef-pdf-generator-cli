@@ -5,10 +5,6 @@ export function pruneUndefined(data) {
   return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
 }
 
-function toBase64Url(base64Text) {
-  return base64Text.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
 function parseKsefFileName(xmlPath) {
   const fileName = path.basename(xmlPath);
   const match = fileName.match(/^KSEF_(\d{10})-(\d{8})-(.+)\.xml$/i);
@@ -29,9 +25,9 @@ function parseKsefFileName(xmlPath) {
   };
 }
 
-function buildAutoAdditionalData(xmlPath, xmlText) {
+function buildAutoAdditionalData(xmlPath, xmlBuffer) {
   const nameData = parseKsefFileName(xmlPath);
-  const hash = toBase64Url(createHash('sha256').update(xmlText, 'utf8').digest('base64'));
+  const hash = createHash('sha256').update(xmlBuffer).digest('base64url');
 
   return {
     nrKSeF: nameData?.nrKSeF ?? '',
@@ -39,11 +35,11 @@ function buildAutoAdditionalData(xmlPath, xmlText) {
   };
 }
 
-export function resolveAdditionalDataForFile(xmlPath, xmlText, defaultAdditionalData, additionalDataMap) {
+export function resolveAdditionalDataForFile(xmlPath, xmlBuffer, defaultAdditionalData, additionalDataMap) {
   const fileName = path.basename(xmlPath);
   const fileSpecificData = pruneUndefined(additionalDataMap[xmlPath] ?? additionalDataMap[fileName] ?? {});
   const resolvedDefaultAdditionalData = pruneUndefined(defaultAdditionalData ?? {});
-  const autoAdditionalData = buildAutoAdditionalData(xmlPath, xmlText);
+  const autoAdditionalData = buildAutoAdditionalData(xmlPath, xmlBuffer);
   const fileNameData = parseKsefFileName(xmlPath);
 
   const diagnostics = {
