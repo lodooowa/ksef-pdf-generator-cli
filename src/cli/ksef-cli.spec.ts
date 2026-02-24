@@ -5,10 +5,10 @@ import { resolveAdditionalDataForFile } from '../../bin/additional-data.mjs';
 describe('resolveAdditionalDataForFile', () => {
   it('keeps auto nrKSeF and qrCode when CLI options are undefined', () => {
     const xmlPath = '/tmp/KSEF_5260250995-20260202-ABC.xml';
-    const xmlText = '<Invoice><Id>1</Id></Invoice>';
+    const xmlBuffer = Buffer.from('<Invoice><Id>1</Id></Invoice>', 'utf-8');
     const defaultAdditionalData = { nrKSeF: undefined, qrCode: undefined };
 
-    const result = resolveAdditionalDataForFile(xmlPath, xmlText, defaultAdditionalData, {});
+    const result = resolveAdditionalDataForFile(xmlPath, xmlBuffer, defaultAdditionalData, {});
 
     expect(result.nrKSeF).toBe('5260250995-20260202-ABC');
     expect(result.qrCode).toBeDefined();
@@ -17,10 +17,10 @@ describe('resolveAdditionalDataForFile', () => {
 
   it('uses manual CLI qrCode override when provided', () => {
     const xmlPath = '/tmp/KSEF_5260250995-20260202-ABC.xml';
-    const xmlText = '<Invoice><Id>1</Id></Invoice>';
+    const xmlBuffer = Buffer.from('<Invoice><Id>1</Id></Invoice>', 'utf-8');
     const defaultAdditionalData = { qrCode: 'https://manual.example/qr' };
 
-    const result = resolveAdditionalDataForFile(xmlPath, xmlText, defaultAdditionalData, {});
+    const result = resolveAdditionalDataForFile(xmlPath, xmlBuffer, defaultAdditionalData, {});
 
     expect(result.nrKSeF).toBe('5260250995-20260202-ABC');
     expect(result.qrCode).toBe('https://manual.example/qr');
