@@ -86,6 +86,7 @@ Opcje:
                           '{"KSEF_5555555555-20250808-ABC.xml":{"nrKSeF":"5555555555-20250808-ABC"}}'.
                           Klucz = nazwa pliku XML (basename) albo pełna ścieżka.
   --debug                 Loguje final additionalData dla każdego pliku.
+  KSEF_CLI_DEBUG=1        Rozszerzone logi diagnostyczne (w tym analiza danych QR/nrKSeF).
   --watch                 Nasłuchuje nowe pliki XML w --input-dir.
   --help, -h              Wyświetla pomoc.
 `);
@@ -104,6 +105,8 @@ const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 
 async function convertXmlToPdf(xmlPath, xmlText, outputDir, additionalData) {
+  const start = Date.now();
+  console.info(`[ksef-cli] Start generowania PDF dla: ${xmlPath}`);
   const file = new File([xmlText], path.basename(xmlPath), { type: 'text/xml' });
   const blob = await generateInvoice(file, additionalData, 'blob');
   const outputPath = toPdfOutputPath(xmlPath, outputDir);
@@ -125,10 +128,11 @@ async function convertXmlToPdf(xmlPath, xmlText, outputDir, additionalData) {
   await fs.rename(outputPath, syncOutputPath);
   await fs.rename(syncOutputPath, outputPath);
   await fs.utimes(outputPath, new Date(), new Date());
-  console.log(`Wygenerowano: ${outputPath}`);
+  console.log(`[ksef-cli] Wygenerowano: ${outputPath} (${Date.now() - start} ms)`);
 }
 
 async function convertSingleFile(xmlPath, outputDir, defaultAdditionalData, additionalDataMap, debug = false) {
+  console.info(`[ksef-cli] Odczyt XML: ${xmlPath}`);
   const xmlText = await fs.readFile(xmlPath, 'utf-8');
   const additionalData = resolveAdditionalDataForFile(xmlPath, xmlText, defaultAdditionalData, additionalDataMap);
   if (debug) {
@@ -146,6 +150,8 @@ async function convertFromInputList(input, outputDir, additionalData, additional
     .map((file) => path.resolve(repoRoot, file))
     .filter(isXmlFile);
 
+  console.info(`[ksef-cli] Do przetworzenia (${files.length}) plików z --input.`);
+
   for (const file of files) {
     await convertSingleFile(file, outputDir, additionalData, additionalDataMap, debug);
   }
@@ -154,12 +160,13 @@ async function convertFromInputList(input, outputDir, additionalData, additional
 async function convertFromDirectory(inputDir, outputDir, additionalData, additionalDataMap, debug = false) {
   const absoluteInputDir = path.resolve(repoRoot, inputDir);
   const entries = await fs.readdir(absoluteInputDir, { withFileTypes: true });
+  const xmlEntries = entries.filter((entry) => entry.isFile() && isXmlFile(entry.name));
 
-  for (const entry of entries) {
-    if (entry.isFile() && isXmlFile(entry.name)) {
-      const xmlPath = path.join(absoluteInputDir, entry.name);
-      await convertSingleFile(xmlPath, outputDir, additionalData, additionalDataMap, debug);
-    }
+  console.info(`[ksef-cli] Do przetworzenia (${xmlEntries.length}) plików z katalogu: ${absoluteInputDir}`);
+
+  for (const entry of xmlEntries) {
+    const xmlPath = path.join(absoluteInputDir, entry.name);
+    await convertSingleFile(xmlPath, outputDir, additionalData, additionalDataMap, debug);
   }
 }
 
@@ -168,6 +175,10 @@ async function main() {
   if (options.help) {
     printHelp();
     return;
+  }
+
+  if (options.debug && !process.env.KSEF_CLI_DEBUG) {
+    process.env.KSEF_CLI_DEBUG = '1';
   }
 
   let jsonAdditionalData = {};
@@ -182,6 +193,14 @@ async function main() {
 
   const outputDir = path.resolve(repoRoot, options.outputDir);
   const additionalData = pruneUndefined({ ...jsonAdditionalData });
+
+  console.info('[ksef-cli] Start pracy CLI', {
+    input: options.input,
+    inputDir: options.inputDir,
+    outputDir,
+    watch: options.watch,
+    debug: options.debug || process.env.KSEF_CLI_DEBUG === '1',
+  });
 
   if (options.nrKSeF) {
     additionalData.nrKSeF = options.nrKSeF;

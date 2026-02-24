@@ -44,10 +44,43 @@ export function resolveAdditionalDataForFile(xmlPath, xmlText, defaultAdditional
   const fileSpecificData = pruneUndefined(additionalDataMap[xmlPath] ?? additionalDataMap[fileName] ?? {});
   const resolvedDefaultAdditionalData = pruneUndefined(defaultAdditionalData ?? {});
   const autoAdditionalData = buildAutoAdditionalData(xmlPath, xmlText);
+  const fileNameData = parseKsefFileName(xmlPath);
 
-  return {
+  const diagnostics = {
+    fileName,
+    fileNameMatchedPattern: Boolean(fileNameData),
+    hasAutoNrKSeF: Boolean(autoAdditionalData.nrKSeF),
+    hasAutoQrCode: Boolean(autoAdditionalData.qrCode),
+    defaultDataKeys: Object.keys(resolvedDefaultAdditionalData),
+    fileSpecificDataKeys: Object.keys(fileSpecificData),
+  };
+
+  if (!diagnostics.fileNameMatchedPattern) {
+    console.warn(
+      `[ksef-cli] [${fileName}] Nazwa pliku nie pasuje do wzorca KSEF_NIP_DATA_ID.xml. ` +
+        'Auto-uzupełnianie nrKSeF/QR jest wyłączone dla tego pliku.'
+    );
+  }
+
+  const resolvedAdditionalData = {
     ...autoAdditionalData,
     ...resolvedDefaultAdditionalData,
     ...fileSpecificData,
   };
+
+  if (!resolvedAdditionalData.nrKSeF || !resolvedAdditionalData.qrCode) {
+    console.warn(
+      `[ksef-cli] [${fileName}] Brak pełnych danych do sekcji QR ` +
+        `(nrKSeF=${Boolean(resolvedAdditionalData.nrKSeF)}, qrCode=${Boolean(resolvedAdditionalData.qrCode)}).`
+    );
+  }
+
+  if (process.env.KSEF_CLI_DEBUG === '1') {
+    console.debug(`[ksef-cli] [${fileName}] Diagnostyka additionalData:`, {
+      ...diagnostics,
+      resolvedAdditionalData,
+    });
+  }
+
+  return resolvedAdditionalData;
 }
